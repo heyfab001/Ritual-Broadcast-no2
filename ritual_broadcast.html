@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ritual Broadcast — Bulk Token Sender</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Ethers.js v5 (UMD Build) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" type="text/javascript"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0A0B10;
+      --bg-card: #12131A;
+      --bg-input: #161726;
+      --border-color: rgba(139, 108, 247, 0.15);
+      --border-color-hover: rgba(139, 108, 247, 0.35);
+      --color-violet: #8B6CF7;
+      --color-violet-glow: rgba(139, 108, 247, 0.4);
+      --color-ember: #FF7A50;
+      --color-ember-glow: rgba(255, 122, 80, 0.4);
+      --color-text: #F1F3F9;
+      --color-text-dim: #9CA3AF;
+      --color-green: #00E676;
+      --color-amber: #FFD000;
+      --color-red: #FF5555;
+      
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --transition-fast: 0.15s ease;
+      --transition-normal: 0.3s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--color-text);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      line-height: 1.5;
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Header */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      position: relative;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      display: block;
+      transition: width var(--transition-fast), height var(--transition-fast);
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(1.2rem, 4vw, 1.65rem);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      background: linear-gradient(135deg, #ffffff 60%, #b099ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .nav-links a {
+      color: var(--color-text-dim);
+      text-decoration: none;
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: var(--transition-fast);
+    }
+
+    .nav-links a:hover {
+      color: var(--color-violet);
+    }
+
+    .wallet-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .network-badge {
+      background: rgba(0, 230, 118, 0.08);
+      border: 1px solid var(--color-green);
+      color: var(--color-green);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+      padding: 4px;
+      outline: none;
+    }
+
+    .menu-toggle span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background-color: var(--color-text);
+      border-radius: 2px;
+      transition: var(--transition-fast);
+    }
+
+    .menu-toggle.active span:nth-child(1) {
+      transform: translateY(8px) rotate(45deg);
+    }
+
+    .menu-toggle.active span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .menu-toggle.active span:nth-child(3) {
+      transform: translateY(-8px) rotate(-45deg);
+    }
+
+    .mobile-menu {
+      display: none;
+      flex-direction: column;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-top: none;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+      padding: 1rem;
+      gap: 12px;
+      margin-top: -1.25rem;
+      margin-bottom: 1.5rem;
+      z-index: 10;
+      width: 100%;
+    }
+
+    .mobile-menu.active {
+      display: flex;
+    }
+
+    .mobile-menu a {
+      color: var(--color-text-dim);
+      text-decoration: none;
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      transition: var(--transition-fast);
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+
+    .mobile-menu a:hover {
+      color: #ffffff;
+      background: rgba(139, 108, 247, 0.08);
+    }
+
+    /* Hero Section */
+    .hero-section {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 2rem;
+      padding: 2.25rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      z-index: 1;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      color: var(--color-ember);
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .hero-content h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 5vw, 2.25rem);
+      font-weight: 700;
+      line-height: 1.2;
+      color: #ffffff;
+    }
+
+    .hero-content p {
+      color: var(--color-text-dim);
+      font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+      max-width: 580px;
+      line-height: 1.6;
+    }
+
+    .hero-links {
+      margin-top: 0.5rem;
+      display: flex;
+      gap: 16px;
+    }
+
+    .faucet-link {
+      color: var(--color-violet);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: var(--transition-fast);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .faucet-link:hover {
+      color: #B099FF;
+      text-decoration: underline;
+    }
+
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    /* Two Column Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+      height: fit-content;
+    }
+
+    .panel-title {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.75rem;
+    }
+
+    .step-badge {
+      font-family: var(--font-display);
+      font-size: 0.7rem;
+      background-color: var(--color-ember);
+      color: var(--bg-dark);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Forms & Inputs */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--color-text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .form-label span.desc {
+      color: var(--color-text-dim);
+      font-size: 0.75rem;
+    }
+
+    input[type="text"], input[type="number"], textarea {
+      width: 100%;
+      background-color: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--color-text);
+      padding: 11px 14px;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      outline: none;
+      transition: var(--transition-fast);
+    }
+
+    input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
+      border-color: var(--color-violet);
+      box-shadow: 0 0 10px rgba(139, 108, 247, 0.25);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 140px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    /* Tabs */
+    .tabs-container {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 0.5rem;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--color-text-dim);
+      padding: 10px 18px;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: var(--transition-fast);
+      min-height: 44px;
+    }
+
+    .tab-btn:hover {
+      color: #ffffff;
+    }
+
+    .tab-btn.active {
+      color: var(--color-violet);
+      border-bottom-color: var(--color-violet);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Drag and Drop Zone */
+    .drag-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.75rem;
+      text-align: center;
+      cursor: pointer;
+      background-color: rgba(22, 23, 38, 0.4);
+      transition: var(--transition-fast);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .drag-zone:hover, .drag-zone.dragover {
+      border-color: var(--color-violet);
+      background-color: rgba(139, 108, 247, 0.05);
+    }
+
+    .drag-zone p {
+      font-size: 0.875rem;
+      color: var(--color-text-dim);
+    }
+
+    .drag-zone .icon {
+      font-size: 1.75rem;
+      color: var(--color-violet);
+    }
+
+    .file-input-hidden {
+      display: none;
+    }
+
+    /* Token details success block */
+    .token-details {
+      background-color: rgba(139, 108, 247, 0.04);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .token-detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status-message {
+      font-size: 0.8rem;
+      margin-top: 4px;
+      display: block;
+    }
+
+    /* Dual Column inputs */
+    .dual-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    .hint-text {
+      font-size: 0.75rem;
+      color: var(--color-text-dim);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      outline: none;
+      min-height: 44px;
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none !important;
+    }
+
+    .btn-primary {
+      background-color: var(--color-violet);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(139, 108, 247, 0.2);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: #9A7EFF;
+      box-shadow: 0 0 16px var(--color-violet-glow);
+    }
+
+    .btn-danger {
+      background-color: var(--color-red);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(255, 85, 85, 0.15);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background-color: #FF6E6E;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--color-violet);
+      color: var(--color-violet);
+      padding: 8px 18px;
+      width: auto;
+      font-size: 0.85rem;
+      border-radius: 20px;
+      display: inline-flex;
+    }
+
+    .btn-outline:hover:not(:disabled) {
+      background: rgba(139, 108, 247, 0.08);
+      box-shadow: 0 0 8px rgba(139, 108, 247, 0.2);
+    }
+
+    .btn-outline.connected {
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .btn-outline.connected:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.3);
+      box-shadow: none;
+    }
+
+    .wallet-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .wallet-dot.success {
+      background-color: var(--color-green);
+      box-shadow: 0 0 8px var(--color-green);
+    }
+
+    .btn-secondary {
+      background-color: #161726;
+      border: 1px solid var(--border-color);
+      color: var(--color-text);
+      box-shadow: none;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      border-color: var(--border-color-hover);
+      background-color: #1E2035;
+    }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 1rem;
+    }
+
+    /* Statistics Panel */
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px 10px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--color-text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-val {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #ffffff;
+      word-break: break-all;
+    }
+
+    .stat-val.highlight {
+      color: var(--color-ember);
+    }
+
+    .warning-banner {
+      background-color: rgba(255, 85, 85, 0.06);
+      border: 1px dashed var(--color-red);
+      color: var(--color-red);
+      font-size: 0.8rem;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      display: none;
+      line-height: 1.4;
+    }
+
+    /* Recipient Grid */
+    .grid-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .recipients-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px;
+      max-height: 230px;
+      overflow-y: auto;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: var(--radius-md);
+    }
+
+    .grid-empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 2.5rem 0;
+      color: var(--color-text-dim);
+      font-size: 0.85rem;
+    }
+
+    .recipient-box {
+      background: #11121F;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .box-index {
+      font-size: 0.65rem;
+      color: var(--color-text-dim);
+    }
+
+    .box-addr {
+      font-size: 0.75rem;
+      color: #ffffff;
+    }
+
+    .box-amount {
+      font-size: 0.8rem;
+    }
+
+    .box-status {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tx-link {
+      color: var(--color-violet);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .tx-link:hover {
+      text-decoration: underline;
+      color: #B099FF;
+    }
+
+    /* Status styles for boxes */
+    .recipient-box.status-invalid {
+      border-color: rgba(255, 85, 85, 0.25);
+      background: rgba(255, 85, 85, 0.03);
+    }
+
+    .recipient-box.status-pending {
+      border-color: var(--color-amber);
+      box-shadow: 0 0 8px rgba(255, 208, 0, 0.15);
+      background: rgba(255, 208, 0, 0.02);
+    }
+
+    .recipient-box.status-submitted {
+      border-color: var(--color-violet);
+      box-shadow: 0 0 8px rgba(139, 108, 247, 0.15);
+      background: rgba(139, 108, 247, 0.02);
+    }
+
+    .recipient-box.status-confirmed {
+      border-color: var(--color-green);
+      box-shadow: 0 0 8px rgba(0, 230, 118, 0.15);
+      background: rgba(0, 230, 118, 0.02);
+    }
+
+    .recipient-box.status-failed {
+      border-color: var(--color-red);
+      box-shadow: 0 0 8px rgba(255, 85, 85, 0.15);
+      background: rgba(255, 85, 85, 0.02);
+    }
+
+    /* Progress Panel */
+    .progress-panel {
+      background: rgba(139, 108, 247, 0.02);
+      border: 1px solid rgba(139, 108, 247, 0.15);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .progress-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .progress-bar-container {
+      background: rgba(255, 255, 255, 0.04);
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar-fill {
+      background: linear-gradient(90deg, var(--color-violet) 0%, #a78bfa 100%);
+      height: 100%;
+      width: 0%;
+      border-radius: 4px;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 8px var(--color-violet-glow);
+    }
+
+    /* Log Panel */
+    .log-panel {
+      background: #040508;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .log-header {
+      background: #08090F;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--color-text-dim);
+    }
+
+    .log-clear-btn {
+      background: none;
+      border: none;
+      color: var(--color-text-dim);
+      cursor: pointer;
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: var(--transition-fast);
+    }
+
+    .log-clear-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .log-body {
+      height: 150px;
+      overflow-y: auto;
+      padding: 12px;
+      font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      line-height: 1.4;
+    }
+
+    .log-line {
+      word-break: break-all;
+    }
+
+    /* Text helpers */
+    .text-violet { color: var(--color-violet); }
+    .text-ember { color: var(--color-ember); }
+    .text-green { color: var(--color-green); }
+    .text-amber { color: var(--color-amber); }
+    .text-red { color: var(--color-red); }
+    .text-dim { color: var(--color-text-dim); }
+    .font-mono { font-family: var(--font-mono); }
+    .font-bold { font-weight: 600; }
+
+    /* SVG Styling and Animations */
+    .central-node {
+      transition: all 0.3s ease;
+    }
+    
+    .sat-dot {
+      transition: fill 0.35s ease, stroke 0.35s ease;
+    }
+    
+    .sat-line {
+      transition: stroke 0.35s ease, stroke-width 0.35s ease;
+    }
+
+    /* Footer */
+    .app-footer {
+      text-align: center;
+      padding: 1.5rem 0;
+      color: var(--color-text-dim);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border-color);
+      margin-top: 1.5rem;
+      font-family: var(--font-mono);
+    }
+
+    /* Responsive design */
+    @media (max-width: 850px) {
+      .nav-links {
+        display: none;
+      }
+      
+      .menu-toggle {
+        display: flex;
+      }
+
+      .hero-section {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 1.5rem;
+        padding: 1.75rem;
+      }
+      
+      .hero-content {
+        align-items: center;
+      }
+      
+      .hero-content p {
+        text-align: center;
+      }
+      
+      .hero-visual {
+        height: auto;
+        max-width: 240px;
+        margin: 0 auto;
+      }
+      
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+      }
+    }
+
+    @media (max-width: 500px) {
+      body {
+        padding: 1rem 0.75rem;
+      }
+      
+      .app-header {
+        padding-bottom: 1rem;
+      }
+      
+      .brand-logo {
+        width: 34px;
+        height: 34px;
+      }
+      
+      .panel {
+        padding: 1rem;
+        gap: 1.1rem;
+      }
+      
+      .dual-inputs {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+      }
+      
+      .btn-group {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+      
+      .stats-summary {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      
+      .network-badge {
+        display: none !important;
+      }
+
+      .recipients-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        max-height: 180px;
+      }
+      
+      .btn-outline {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <img class="brand-logo" src="./ritual_logo.jpg" alt="Ritual Broadcast Logo">
+        <h1>Ritual Broadcast</h1>
+      </div>
+      
+      <nav class="nav-links">
+        <a href="https://faucet.ritualfoundation.org" target="_blank">Faucet</a>
+        <a href="https://explorer.ritualfoundation.org" target="_blank">Explorer</a>
+      </nav>
+
+      <div class="wallet-status">
+        <div class="network-badge" id="network-badge" style="display: none;">Connected</div>
+        <button id="connect-btn" class="btn btn-outline" onclick="connectWallet()">Connect Wallet</button>
+        
+        <button class="menu-toggle" id="menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle Menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Mobile Menu Drawer -->
+    <div class="mobile-menu" id="mobile-menu">
+      <a href="https://faucet.ritualfoundation.org" target="_blank" onclick="toggleMobileMenu()">Faucet</a>
+      <a href="https://explorer.ritualfoundation.org" target="_blank" onclick="toggleMobileMenu()">Explorer</a>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <span class="hero-eyebrow">RITUAL BROADCAST</span>
+        <h2><span class="text-violet">One Click</span>. <span class="text-violet">Hundreds of Wallets</span>. <span class="text-violet">Zero Hassle</span>.</h2>
+        <p>
+          Batch transfer native RITUAL and ERC-20 tokens to multiple wallets from a single transaction. Import recipients with CSV or add them manually, validate every address, and execute secure on-chain payments in seconds.
+        </p>
+        <div class="hero-links">
+          <a href="https://faucet.ritualfoundation.org" target="_blank" class="faucet-link font-mono">
+            Official Faucet ↗
+          </a>
+          <a href="https://explorer.ritualfoundation.org" target="_blank" class="faucet-link font-mono">
+            Block Explorer ↗
+          </a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <svg id="broadcast-svg" viewBox="0 0 200 200" width="220" height="200">
+          <defs>
+            <radialGradient id="hub-glow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="var(--color-violet)" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="var(--color-violet)" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="100" cy="100" r="75" fill="url(#hub-glow)" />
+          <!-- Central Hub -->
+          <circle cx="100" cy="100" r="14" fill="var(--color-violet)" class="central-node" style="filter: drop-shadow(0 0 8px var(--color-violet));" />
+          <circle cx="100" cy="100" r="20" fill="none" stroke="var(--color-violet)" stroke-width="1.5" class="central-node-pulse" />
+        </svg>
+      </div>
+    </section>
+
+    <!-- Dashboard Grid -->
+    <div class="dashboard-grid">
+      
+      <!-- Panel 1: Configuration & Inputs -->
+      <div class="panel">
+        <div class="panel-title">
+          <span>Broadcaster Options</span>
+          <span class="step-badge">Configure</span>
+        </div>
+
+        <!-- Token Selection -->
+        <div class="form-group">
+          <label class="form-label" for="token-address-input">
+            <span>ERC-20 Token Address</span>
+            <span class="desc">Leave blank for Native RITUAL</span>
+          </label>
+          <input type="text" id="token-address-input" placeholder="0x..." oninput="handleTokenAddressChange()">
+          <span id="token-status-message" class="status-message"></span>
+          <div id="token-details-container" class="token-details" style="display: none;"></div>
+        </div>
+
+        <!-- Recipient Input (with Tabs) -->
+        <div class="form-group">
+          <div class="form-label">
+            <span>Recipient Distribution List</span>
+            <a href="#" id="demo-link" onclick="loadDemoList(event)" class="text-violet font-bold" style="font-size: 0.75rem; text-decoration: none;">Load Demo List</a>
+          </div>
+          
+          <div class="tabs-container">
+            <button id="btn-tab-manual" class="tab-btn active" onclick="switchTab('tab-manual')">Manual Textarea</button>
+            <button id="btn-tab-csv" class="tab-btn" onclick="switchTab('tab-csv')">CSV Upload</button>
+          </div>
+
+          <!-- Tab Content 1: Manual Input -->
+          <div id="content-tab-manual" class="tab-content active">
+            <textarea id="recipient-textarea" placeholder="0x70997970C51812dc3A010C7d01b50e0d17dc79C8,1.5&#10;0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC,2.0&#10;0x90F79bf6EB2c4f870365E785982E1f101E93b906 (amount omitted uses default)"></textarea>
+          </div>
+
+          <!-- Tab Content 2: CSV Upload -->
+          <div id="content-tab-csv" class="tab-content">
+            <div class="drag-zone" id="drag-drop-zone" onclick="document.getElementById('csv-file-input').click()">
+              <span class="icon">📁</span>
+              <p>Drag & Drop a CSV / TXT file here or <span class="text-violet font-bold">Browse Files</span></p>
+              <span class="desc text-dim" style="font-size: 0.7rem;">Expected Format: address,amount (one per line)</span>
+              <input type="file" id="csv-file-input" class="file-input-hidden" accept=".csv,.txt" onchange="handleCSVUpload(event)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Default amount and batch sizes -->
+        <div class="dual-inputs">
+          <div class="form-group">
+            <label class="form-label" for="default-amount-input">
+              <span>Default Amount</span>
+            </label>
+            <input type="number" id="default-amount-input" step="any" min="0" placeholder="1.0" value="1.0" oninput="if(allParsedRecipients.length > 0) validateRecipientsList()">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="batch-size-input">
+              <span>Batch Concurrency</span>
+            </label>
+            <input type="number" id="batch-size-input" min="1" max="100" value="10" oninput="updateBatchHint()">
+          </div>
+        </div>
+
+        <div class="hint-text text-amber" id="batch-size-hint">
+          Enter and validate a list to see batch calculations.
+        </div>
+
+        <button id="validate-btn" class="btn btn-secondary" onclick="validateRecipientsList()">
+          Validate List
+        </button>
+      </div>
+
+      <!-- Panel 2: Live Monitor & Broadcast Control -->
+      <div class="panel">
+        <div class="panel-title">
+          <span>Live Broadcast Dashboard</span>
+          <span class="step-badge" id="dashboard-status-badge">Idle</span>
+        </div>
+
+        <!-- Stats Summary -->
+        <div class="stats-summary">
+          <div class="stat-card">
+            <span class="stat-label">Valid Targets</span>
+            <span id="stat-total-recipients" class="stat-val">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Total Outflow</span>
+            <span id="stat-total-amount" class="stat-val highlight">0 RITUAL</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Invalid Lines</span>
+            <span id="stat-invalid-lines" class="stat-val text-red">0</span>
+          </div>
+        </div>
+
+        <!-- Warning banner -->
+        <div id="invalid-warning" class="warning-banner"></div>
+
+        <!-- Recipient Grid Status -->
+        <div class="grid-container">
+          <span class="form-label">Recipient Grid Tracker</span>
+          <div id="recipients-grid" class="recipients-grid">
+            <div class="grid-empty-state">No parsed recipients. Click "Validate List" to populate.</div>
+          </div>
+        </div>
+
+        <!-- Progress panel -->
+        <div class="progress-panel" id="progress-panel-wrapper" style="display: none;">
+          <div class="progress-stats">
+            <span>Overall progress: <strong id="progress-text" class="font-mono">0 / 0</strong></span>
+            <span id="progress-percentage" class="font-mono text-violet font-bold">0%</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+          </div>
+        </div>
+
+        <!-- Control Action Buttons -->
+        <div class="btn-group">
+          <button id="start-btn" class="btn btn-primary" onclick="startBroadcasting()" disabled>
+            🚀 Start Broadcasting
+          </button>
+          <button id="stop-btn" class="btn btn-danger" onclick="stopBroadcasting()" disabled>
+            🛑 Stop
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Log Console -->
+    <div class="log-panel">
+      <div class="log-header">
+        <span>Execution Terminal Logs</span>
+        <button class="log-clear-btn" onclick="clearLogs()">Clear Console</button>
+      </div>
+      <div class="log-body font-mono" id="log-body">
+        <div class="log-line text-dim">[System] Core Broadcaster ready. Connect wallet to begin.</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      Ritual Chain (ID: 1979) • RPC: rpc.ritualfoundation.org • UMD v5.7.2
+    </footer>
+
+  </div>
+
+  <script>
+    // Mobile Menu Toggle
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      const toggle = document.getElementById('menu-toggle');
+      menu.classList.toggle('active');
+      toggle.classList.toggle('active');
+    }
+
+    // Constants
+    const RITUAL_CHAIN_ID = 1979;
+    const RITUAL_CHAIN_HEX = '0x' + RITUAL_CHAIN_ID.toString(16);
+    const RITUAL_RPC_URL = 'https://rpc.ritualfoundation.org';
+    const RITUAL_EXPLORER = 'https://explorer.ritualfoundation.org';
+    const RITUAL_FAUCET = 'https://faucet.ritualfoundation.org';
+
+    // ERC-20 Human Readable ABI
+    const ERC20_ABI = [
+      'function symbol() public view returns (string)',
+      'function decimals() public view returns (uint8)',
+      'function balanceOf(address owner) public view returns (uint256)',
+      'function transfer(address to, uint256 value) public returns (bool)'
+    ];
+
+    // Global App State
+    let provider = null;
+    let signer = null;
+    let walletAddress = '';
+    let walletConnected = false;
+
+    let isERC20 = false;
+    let tokenAddress = '';
+    let tokenSymbol = 'RITUAL';
+    let tokenDecimals = 18;
+    let tokenContract = null;
+
+    let allParsedRecipients = [];
+    let validRecipients = [];
+    let isSending = false;
+
+    // Stat Trackers for sending
+    let totalSent = 0;
+    let totalFailed = 0;
+
+    // Lifecycle
+    window.addEventListener('DOMContentLoaded', () => {
+      setupSVG();
+      setupDragDrop();
+      
+      // Auto-check if already connected
+      if (typeof window.ethereum !== 'undefined') {
+        window.ethereum.on('accountsChanged', (accounts) => {
+          if (accounts.length === 0) {
+            walletConnected = false;
+            walletAddress = '';
+            signer = null;
+            updateWalletUI();
+            appendLog("Wallet disconnected by user.");
+          } else {
+            initializeConnection();
+          }
+        });
+
+        window.ethereum.on('chainChanged', () => {
+          window.location.reload();
+        });
+      }
+    });
+
+    // Tab Switcher
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      
+      if (tabId === 'tab-manual') {
+        document.getElementById('btn-tab-manual').classList.add('active');
+        document.getElementById('content-tab-manual').classList.add('active');
+      } else if (tabId === 'tab-csv') {
+        document.getElementById('btn-tab-csv').classList.add('active');
+        document.getElementById('content-tab-csv').classList.add('active');
+      }
+    }
+
+    // Drag & Drop Setup
+    function setupDragDrop() {
+      const zone = document.getElementById('drag-drop-zone');
+      
+      ['dragenter', 'dragover'].forEach(eventName => {
+        zone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          zone.classList.add('dragover');
+        }, false);
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        zone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          zone.classList.remove('dragover');
+        }, false);
+      });
+      
+      zone.addEventListener('drop', (e) => {
+        handleCSVUpload(e);
+      }, false);
+    }
+
+    // CSV Upload
+    function handleCSVUpload(event) {
+      const file = event.target.files[0] || (event.dataTransfer && event.dataTransfer.files[0]);
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        document.getElementById('recipient-textarea').value = text;
+        appendLog(`File "${file.name}" loaded successfully. ${text.split('\n').filter(l => l.trim()).length} lines detected.`);
+        switchTab('tab-manual');
+        validateRecipientsList();
+      };
+      reader.onerror = function() {
+        appendLog("Error reading file.", true);
+      };
+      reader.readAsText(file);
+    }
+
+    // Load Demo data
+    function loadDemoList(event) {
+      if (event) event.preventDefault();
+      const demo = `0x70997970C51812dc3A010C7d01b50e0d17dc79C8,0.015
+0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC,0.02
+0x90F79bf6EB2c4f870365E785982E1f101E93b906,0.0075
+0x15d34AAf54a67C643048206C4d532E2213D77fcc,
+0x9965503Ab7F594349623297f94ca6f014076C559,0.0325
+0xInvalidAddressFormatExample,1.0
+0x976EA74026E726554dB657fA54763abd0C3a0aa9,-0.5
+0x14dC79964da2C08b23698B3D3cc7Ca32193d9955,0.005`;
+      
+      document.getElementById('recipient-textarea').value = demo;
+      switchTab('tab-manual');
+      validateRecipientsList();
+      appendLog("Demo recipient list populated.");
+    }
+
+    // Connect Wallet
+    async function connectWallet() {
+      if (typeof window.ethereum === 'undefined') {
+        appendLog("MetaMask or other injected Web3 wallet not detected.", true);
+        alert("Web3 Wallet not found. Please install MetaMask or open this app inside a compatible Web3 browser.");
+        return;
+      }
+      
+      try {
+        appendLog("Requesting account access from wallet...");
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (accounts.length === 0) {
+          appendLog("No accounts authorized.", true);
+          return;
+        }
+        
+        await checkAndSwitchNetwork();
+      } catch (err) {
+        appendLog(`Connection request failed: ${err.message}`, true);
+      }
+    }
+
+    // Switch Network
+    async function checkAndSwitchNetwork() {
+      try {
+        appendLog("Checking wallet network config...");
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: RITUAL_CHAIN_HEX }],
+        });
+        
+        await initializeConnection();
+      } catch (switchError) {
+        // Error code 4902 means the chain hasn't been added yet
+        if (switchError.code === 4902 || (switchError.data && switchError.data.originalError && switchError.data.originalError.code === 4902)) {
+          try {
+            appendLog("Ritual Chain not found in network list. Requesting to add network...");
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [
+                {
+                  chainId: RITUAL_CHAIN_HEX,
+                  chainName: 'Ritual Chain',
+                  rpcUrls: [RITUAL_RPC_URL],
+                  nativeCurrency: {
+                    name: 'RITUAL',
+                    symbol: 'RITUAL',
+                    decimals: 18
+                  },
+                  blockExplorerUrls: [RITUAL_EXPLORER]
+                },
+              ],
+            });
+            
+            await initializeConnection();
+          } catch (addError) {
+            appendLog(`Failed to add Ritual Chain: ${addError.message}`, true);
+          }
+        } else {
+          appendLog(`Failed to switch network: ${switchError.message}`, true);
+        }
+      }
+    }
+
+    // Init Ethers Connection
+    async function initializeConnection() {
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+      walletAddress = await signer.getAddress();
+      
+      const network = await provider.getNetwork();
+      if (network.chainId !== RITUAL_CHAIN_ID) {
+        appendLog(`Wrong network connected (ID: ${network.chainId}). Switch to Ritual Chain (ID: 1979) to interact.`, true);
+        walletConnected = false;
+        updateWalletUI();
+        return;
+      }
+      
+      walletConnected = true;
+      appendLog(`Wallet successfully connected: ${walletAddress}`);
+      
+      updateWalletUI();
+      await updateWalletBalance();
+      
+      // Re-trigger token validation if contract field is populated
+      if (document.getElementById('token-address-input').value.trim() !== '') {
+        await handleTokenAddressChange();
+      }
+    }
+
+    // Update Wallet UI Status
+    function updateWalletUI() {
+      const btn = document.getElementById('connect-btn');
+      const badge = document.getElementById('network-badge');
+      
+      if (walletConnected) {
+        const shortAddr = walletAddress.substring(0, 6) + '...' + walletAddress.substring(38);
+        btn.innerHTML = `<span class="wallet-dot success"></span> ${shortAddr}`;
+        btn.className = 'btn btn-outline connected';
+        badge.style.display = 'block';
+        badge.textContent = 'Ritual Chain';
+      } else {
+        btn.innerHTML = 'Connect Wallet';
+        btn.className = 'btn btn-outline';
+        badge.style.display = 'none';
+      }
+      updateStartButtonState();
+    }
+
+    // Fetch Wallet Balance
+    async function updateWalletBalance() {
+      if (!walletConnected) return;
+      
+      if (isERC20) {
+        try {
+          const balance = await tokenContract.balanceOf(walletAddress);
+          const formatted = ethers.utils.formatUnits(balance, tokenDecimals);
+          const detailsEl = document.getElementById('token-details-container');
+          
+          detailsEl.innerHTML = `
+            <div class="token-detail-row">
+              <span>Token Symbol:</span>
+              <span class="font-mono text-violet font-bold">${tokenSymbol}</span>
+            </div>
+            <div class="token-detail-row">
+              <span>Decimals:</span>
+              <span class="font-mono">${tokenDecimals}</span>
+            </div>
+            <div class="token-detail-row">
+              <span>Your Balance:</span>
+              <span class="font-mono text-ember font-bold">${parseFloat(formatted).toLocaleString(undefined, {maximumFractionDigits: 6})} ${tokenSymbol}</span>
+            </div>
+          `;
+        } catch (e) {
+          appendLog(`Failed to query ERC-20 balance: ${e.message}`, true);
+        }
+      } else {
+        try {
+          const bal = await provider.getBalance(walletAddress);
+          const formatted = ethers.utils.formatEther(bal);
+          const statusEl = document.getElementById('token-status-message');
+          statusEl.innerHTML = `<span class="text-dim">Your RITUAL balance:</span> <strong class="text-ember font-mono">${parseFloat(formatted).toLocaleString(undefined, {maximumFractionDigits: 6})} RITUAL</strong>`;
+        } catch (e) {
+          appendLog(`Failed to fetch native RITUAL balance: ${e.message}`, true);
+        }
+      }
+    }
+
+    // Token Contract Switch / Add Loading
+    async function handleTokenAddressChange() {
+      const input = document.getElementById('token-address-input');
+      const statusEl = document.getElementById('token-status-message');
+      const detailsEl = document.getElementById('token-details-container');
+      
+      const val = input.value.trim();
+      if (val === '') {
+        isERC20 = false;
+        tokenAddress = '';
+        tokenSymbol = 'RITUAL';
+        tokenDecimals = 18;
+        tokenContract = null;
+        statusEl.innerHTML = '';
+        detailsEl.style.display = 'none';
+        
+        await updateWalletBalance();
+        if (allParsedRecipients.length > 0) validateRecipientsList();
+        return;
+      }
+      
+      if (!ethers.utils.isAddress(val)) {
+        statusEl.innerHTML = '<span class="text-red">Invalid address format</span>';
+        detailsEl.style.display = 'none';
+        return;
+      }
+      
+      if (!walletConnected) {
+        statusEl.innerHTML = '<span class="text-amber">Connect wallet to load token configuration</span>';
+        detailsEl.style.display = 'none';
+        return;
+      }
+      
+      statusEl.innerHTML = '<span class="text-dim">Loading contract symbols...</span>';
+      detailsEl.style.display = 'none';
+      
+      try {
+        const contract = new ethers.Contract(val, ERC20_ABI, provider);
+        
+        // Parallel queries
+        const [symbol, decimals, balance] = await Promise.all([
+          contract.symbol().catch(e => { throw new Error("Could not fetch symbol. Is this a standard ERC-20 contract?"); }),
+          contract.decimals().catch(e => { throw new Error("Could not fetch decimals. Is this a standard ERC-20 contract?"); }),
+          contract.balanceOf(walletAddress).catch(e => { throw new Error("Could not fetch token balance."); })
+        ]);
+        
+        isERC20 = true;
+        tokenAddress = val;
+        tokenSymbol = symbol;
+        tokenDecimals = decimals;
+        tokenContract = contract;
+        
+        const formattedBalance = ethers.utils.formatUnits(balance, decimals);
+        
+        statusEl.innerHTML = '';
+        detailsEl.style.display = 'block';
+        detailsEl.innerHTML = `
+          <div class="token-detail-row">
+            <span>Token Symbol:</span>
+            <span class="font-mono text-violet font-bold">${symbol}</span>
+          </div>
+          <div class="token-detail-row">
+            <span>Decimals:</span>
+            <span class="font-mono">${decimals}</span>
+          </div>
+          <div class="token-detail-row">
+            <span>Your Balance:</span>
+            <span class="font-mono text-ember font-bold">${parseFloat(formattedBalance).toLocaleString(undefined, {maximumFractionDigits: 6})} ${symbol}</span>
+          </div>
+        `;
+        
+        appendLog(`Loaded ERC-20 Token: ${symbol} (${decimals} decimals)`);
+        
+        // Revalidate inputs with new decimal layout
+        if (allParsedRecipients.length > 0) validateRecipientsList();
+      } catch (err) {
+        isERC20 = false;
+        tokenAddress = '';
+        tokenSymbol = 'RITUAL';
+        tokenDecimals = 18;
+        tokenContract = null;
+        statusEl.innerHTML = `<span class="text-red">Error: ${err.message || 'Verification failed'}</span>`;
+        detailsEl.style.display = 'none';
+      }
+    }
+
+    // Input Validation Logic
+    function validateRecipientsList() {
+      const text = document.getElementById('recipient-textarea').value;
+      const defaultAmountVal = document.getElementById('default-amount-input').value.trim();
+      
+      allParsedRecipients = [];
+      validRecipients = [];
+      
+      const lines = text.split('\n');
+      let invalidCount = 0;
+      let totalAmount = ethers.BigNumber.from(0);
+      
+      lines.forEach((line, idx) => {
+        const lineNum = idx + 1;
+        const cleanLine = line.trim();
+        if (cleanLine === '') return;
+        
+        const parts = cleanLine.split(',');
+        const addressPart = parts[0].trim();
+        let amountPart = parts.length > 1 ? parts[1].trim() : '';
+        
+        let isValid = true;
+        let errorMsg = '';
+        
+        // Address Check
+        if (!ethers.utils.isAddress(addressPart)) {
+          isValid = false;
+          errorMsg = 'Invalid Address';
+        }
+        
+        // Amount Check
+        let amount = amountPart;
+        if (amount === '') {
+          amount = defaultAmountVal;
+          if (amount === '') {
+            isValid = false;
+            errorMsg = 'No Amount';
+          }
+        }
+        
+        if (isValid) {
+          if (isNaN(amount) || parseFloat(amount) <= 0) {
+            isValid = false;
+            errorMsg = 'Invalid Amount';
+          }
+        }
+        
+        const parsedObj = {
+          id: allParsedRecipients.length,
+          lineNum: lineNum,
+          rawAddress: addressPart,
+          address: isValid ? ethers.utils.getAddress(addressPart) : addressPart,
+          amount: amount,
+          isValid: isValid,
+          errorMsg: errorMsg,
+          status: 'idle',
+          txHash: '',
+          failedReason: ''
+        };
+        
+        allParsedRecipients.push(parsedObj);
+        
+        if (isValid) {
+          validRecipients.push(parsedObj);
+          try {
+            const parsedUnits = ethers.utils.parseUnits(amount, tokenDecimals);
+            totalAmount = totalAmount.add(parsedUnits);
+          } catch (e) {
+            parsedObj.isValid = false;
+            parsedObj.errorMsg = `Decimal overflow`;
+            validRecipients.pop();
+            invalidCount++;
+          }
+        } else {
+          invalidCount++;
+        }
+      });
+      
+      renderValidationUI(totalAmount, invalidCount);
+    }
+
+    // Render Grid Cards
+    function renderValidationUI(totalAmount, invalidCount) {
+      document.getElementById('stat-total-recipients').textContent = validRecipients.length;
+      
+      const formattedTotal = ethers.utils.formatUnits(totalAmount, tokenDecimals);
+      document.getElementById('stat-total-amount').textContent = `${parseFloat(formattedTotal).toLocaleString(undefined, {maximumFractionDigits: 6})} ${tokenSymbol}`;
+      document.getElementById('stat-invalid-lines').textContent = invalidCount;
+      
+      const warningEl = document.getElementById('invalid-warning');
+      if (invalidCount > 0) {
+        warningEl.style.display = 'block';
+        warningEl.textContent = `Warning: ${invalidCount} invalid lines found. They will be ignored when sending.`;
+      } else {
+        warningEl.style.display = 'none';
+      }
+      
+      const grid = document.getElementById('recipients-grid');
+      grid.innerHTML = '';
+      
+      if (allParsedRecipients.length === 0) {
+        grid.innerHTML = '<div class="grid-empty-state">No parsed recipients. Click "Validate List" to populate.</div>';
+        document.getElementById('start-btn').disabled = true;
+        return;
+      }
+      
+      allParsedRecipients.forEach(item => {
+        const box = document.createElement('div');
+        box.id = `box-recipient-${item.id}`;
+        
+        if (item.isValid) {
+          box.className = 'recipient-box status-idle';
+          const shortAddr = item.address.substring(0, 6) + '...' + item.address.substring(38);
+          box.innerHTML = `
+            <div class="box-index">#${item.lineNum}</div>
+            <div class="box-addr font-mono" title="${item.address}">${shortAddr}</div>
+            <div class="box-amount font-mono font-bold">${item.amount} ${tokenSymbol}</div>
+            <div class="box-status text-dim">Ready</div>
+          `;
+        } else {
+          box.className = 'recipient-box status-invalid';
+          const shortAddr = item.rawAddress.length > 10 ? item.rawAddress.substring(0, 6) + '...' + item.rawAddress.substring(item.rawAddress.length - 4) : item.rawAddress;
+          box.innerHTML = `
+            <div class="box-index text-red">#${item.lineNum}</div>
+            <div class="box-addr font-mono text-red" title="${item.rawAddress}">${shortAddr || 'Empty line'}</div>
+            <div class="box-amount font-mono text-red">${item.amount || '—'}</div>
+            <div class="box-status text-red font-bold">${item.errorMsg}</div>
+          `;
+        }
+        grid.appendChild(box);
+      });
+      
+      updateStartButtonState();
+      updateBatchHint();
+    }
+
+    function updateStartButtonState() {
+      const btn = document.getElementById('start-btn');
+      if (walletConnected && validRecipients.length > 0 && !isSending) {
+        btn.disabled = false;
+      } else {
+        btn.disabled = true;
+      }
+    }
+
+    function updateBatchHint() {
+      const input = document.getElementById('batch-size-input');
+      const hint = document.getElementById('batch-size-hint');
+      
+      const size = Math.max(1, Math.min(100, parseInt(input.value) || 10));
+      const total = validRecipients.length;
+      
+      if (total === 0) {
+        hint.textContent = 'Enter and validate a list to see batch calculations.';
+        return;
+      }
+      
+      const rounds = Math.ceil(total / size);
+      hint.innerHTML = `<span class="text-ember font-bold">${total}</span> target(s) &rarr; <span class="text-violet font-bold">${rounds}</span> round(s) of up to <span class="text-violet font-bold">${size}</span> at once.`;
+    }
+
+    // Toggle forms elements during send
+    function toggleInputs(disable) {
+      document.getElementById('recipient-textarea').disabled = disable;
+      document.getElementById('token-address-input').disabled = disable;
+      document.getElementById('default-amount-input').disabled = disable;
+      document.getElementById('batch-size-input').disabled = disable;
+      document.getElementById('csv-file-input').disabled = disable;
+      document.getElementById('validate-btn').disabled = disable;
+      
+      document.getElementById('demo-link').style.pointerEvents = disable ? 'none' : 'auto';
+      document.getElementById('demo-link').style.opacity = disable ? '0.5' : '1';
+      
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.disabled = disable;
+        btn.style.opacity = disable ? '0.5' : '1';
+        btn.style.pointerEvents = disable ? 'none' : 'auto';
+      });
+    }
+
+    // Broadcast Loops
+    async function startBroadcasting() {
+      if (isSending || !walletConnected || validRecipients.length === 0) return;
+      
+      isSending = true;
+      totalSent = 0;
+      totalFailed = 0;
+      
+      document.getElementById('dashboard-status-badge').textContent = 'Active';
+      document.getElementById('dashboard-status-badge').style.backgroundColor = 'var(--color-violet)';
+      document.getElementById('dashboard-status-badge').style.color = '#000000';
+      
+      toggleInputs(true);
+      document.getElementById('start-btn').disabled = true;
+      document.getElementById('stop-btn').disabled = false;
+      
+      document.getElementById('progress-panel-wrapper').style.display = 'flex';
+      updateProgress();
+      
+      // Reset statuses to Ready
+      validRecipients.forEach(item => {
+        item.status = 'idle';
+        const box = document.getElementById(`box-recipient-${item.id}`);
+        if (box) {
+          box.className = 'recipient-box status-idle';
+          const statusEl = box.querySelector('.box-status');
+          statusEl.innerHTML = 'Ready';
+          statusEl.className = 'box-status text-dim';
+        }
+      });
+      
+      const batchSizeInput = document.getElementById('batch-size-input');
+      const batchSize = Math.max(1, Math.min(100, parseInt(batchSizeInput.value) || 10));
+      
+      appendLog(`Starting bulk distribution of ${validRecipients.length} payments. Batch size: ${batchSize}.`);
+      
+      // Main Batch Loop
+      for (let i = 0; i < validRecipients.length; i += batchSize) {
+        if (!isSending) {
+          appendLog("Broadcast stopped by user.", true);
+          break;
+        }
+        
+        const batchNum = Math.floor(i / batchSize) + 1;
+        const totalBatches = Math.ceil(validRecipients.length / batchSize);
+        const batchItems = validRecipients.slice(i, i + batchSize);
+        
+        appendLog(`[Batch ${batchNum}/${totalBatches}] Querying base pending nonce...`);
+        
+        let baseNonce;
+        try {
+          baseNonce = await provider.getTransactionCount(walletAddress, 'pending');
+          appendLog(`[Batch ${batchNum}/${totalBatches}] Nonce synchronized at ${baseNonce}. Submitting ${batchItems.length} transactions...`);
+        } catch (nonceErr) {
+          appendLog(`[Batch ${batchNum}] FAILED to fetch base nonce: ${nonceErr.message}. Halting process.`, true);
+          break;
+        }
+        
+        // Launch batch items concurrently
+        const promises = batchItems.map((item, idx) => {
+          return sendTransaction(item, idx, baseNonce, batchNum);
+        });
+        
+        // Await confirmation of the whole batch
+        const results = await Promise.allSettled(promises);
+        
+        // Log batch summary
+        const batchSuccess = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+        const batchFail = batchItems.length - batchSuccess;
+        appendLog(`[Batch ${batchNum}/${totalBatches}] Completed. Confirmed: ${batchSuccess}, Failed: ${batchFail}`);
+        
+        // Update user balances after batch completion
+        await updateWalletBalance();
+      }
+      
+      // Conclude broadcasting
+      isSending = false;
+      document.getElementById('dashboard-status-badge').textContent = 'Idle';
+      document.getElementById('dashboard-status-badge').style.backgroundColor = 'transparent';
+      document.getElementById('dashboard-status-badge').style.color = 'var(--color-text-dim)';
+      
+      toggleInputs(false);
+      updateStartButtonState();
+      document.getElementById('stop-btn').disabled = true;
+      
+      appendLog(`Distribution cycle ended. Confirmed transactions: ${totalSent}, Failed: ${totalFailed}.`);
+      resetSVGSatellites();
+    }
+
+    // Stop broadcast gracefully
+    function stopBroadcasting() {
+      if (!isSending) return;
+      isSending = false;
+      document.getElementById('stop-btn').disabled = true;
+      appendLog("Stop signal received. Halting broadcast after current batch finishes...", true);
+    }
+
+    // Send single TX
+    async function sendTransaction(recipient, indexInBatch, baseNonce, batchNum) {
+      const box = document.getElementById(`box-recipient-${recipient.id}`);
+      const statusEl = box.querySelector('.box-status');
+      
+      // Update Grid Box State
+      box.className = 'recipient-box status-pending';
+      statusEl.innerHTML = 'Signing...';
+      statusEl.className = 'box-status text-amber';
+      
+      const satelliteIndex = indexInBatch % 12;
+      updateSatelliteStyle(satelliteIndex, 'pending');
+      
+      try {
+        let tx;
+        const nonce = baseNonce + indexInBatch;
+        
+        if (isERC20) {
+          const rawAmount = ethers.utils.parseUnits(recipient.amount, tokenDecimals);
+          tx = await tokenContract.transfer(recipient.address, rawAmount, {
+            nonce: nonce
+          });
+        } else {
+          const rawAmount = ethers.utils.parseEther(recipient.amount);
+          tx = await signer.sendTransaction({
+            to: recipient.address,
+            value: rawAmount,
+            nonce: nonce
+          });
+        }
+        
+        // Tx Submitted (wait for inclusion)
+        recipient.txHash = tx.hash;
+        box.className = 'recipient-box status-submitted';
+        statusEl.innerHTML = `In flight`;
+        statusEl.className = 'box-status text-violet';
+        
+        const txLink = document.createElement('a');
+        txLink.href = `${RITUAL_EXPLORER}/tx/${tx.hash}`;
+        txLink.target = '_blank';
+        txLink.className = 'tx-link';
+        txLink.textContent = ' ↗';
+        statusEl.appendChild(txLink);
+        
+        appendLog(`[Batch ${batchNum}] Transaction submitted for ${recipient.address}. Hash: ${tx.hash}`);
+        
+        // Wait for confirmation
+        const receipt = await tx.wait();
+        
+        // Confirmed Success
+        box.className = 'recipient-box status-confirmed';
+        statusEl.innerHTML = 'Confirmed';
+        statusEl.className = 'box-status text-green';
+        statusEl.appendChild(txLink.cloneNode(true));
+        
+        updateSatelliteStyle(satelliteIndex, 'success');
+        appendLog(`[Batch ${batchNum}] Transaction confirmed for ${recipient.address} in block ${receipt.blockNumber}`);
+        
+        totalSent++;
+        updateProgress();
+        return { success: true, receipt };
+      } catch (err) {
+        console.error(err);
+        let errorMsg = err.reason || err.message || "Unknown error";
+        
+        // Format common wallet errors
+        if (errorMsg.includes("user rejected") || errorMsg.includes("User rejected")) {
+          errorMsg = "User rejected signature";
+        }
+        
+        // Truncate overly long system logs
+        const shortError = errorMsg.length > 25 ? errorMsg.substring(0, 22) + '...' : errorMsg;
+        
+        box.className = 'recipient-box status-failed';
+        statusEl.innerHTML = `Failed: ${shortError}`;
+        statusEl.className = 'box-status text-red';
+        
+        updateSatelliteStyle(satelliteIndex, 'failed');
+        appendLog(`[Batch ${batchNum}] FAILED for ${recipient.address}: ${errorMsg}`, true);
+        
+        totalFailed++;
+        updateProgress();
+        return { success: false, error: err };
+      }
+    }
+
+    // Update Progress UI
+    function updateProgress() {
+      const total = validRecipients.length;
+      const finished = totalSent + totalFailed;
+      
+      document.getElementById('progress-text').textContent = `${finished} / ${total}`;
+      const pct = total > 0 ? Math.round((finished / total) * 100) : 0;
+      document.getElementById('progress-percentage').textContent = `${pct}%`;
+      document.getElementById('progress-bar-fill').style.width = `${pct}%`;
+    }
+
+    // Log Console Helper
+    function appendLog(msg, isError = false) {
+      const logBody = document.getElementById('log-body');
+      const line = document.createElement('div');
+      line.className = 'log-line' + (isError ? ' text-red' : '');
+      
+      const time = new Date().toLocaleTimeString();
+      line.innerHTML = `<span class="text-dim">[${time}]</span> ${msg}`;
+      
+      logBody.appendChild(line);
+      logBody.scrollTop = logBody.scrollHeight;
+    }
+
+    function clearLogs() {
+      const logBody = document.getElementById('log-body');
+      logBody.innerHTML = '<div class="log-line text-dim">[System] Console logs cleared.</div>';
+    }
+
+    // Setup interactive broadcasting SVG
+    function setupSVG() {
+      const svg = document.getElementById('broadcast-svg');
+      const r = 62;
+      const cx = 100;
+      const cy = 100;
+      
+      // Clear dynamically generated ones
+      svg.querySelectorAll('.satellite-group').forEach(e => e.remove());
+      
+      for (let i = 0; i < 12; i++) {
+        const angle = (i * 30 * Math.PI) / 180;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'satellite-group');
+        
+        // Laser connection path
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', cx);
+        line.setAttribute('y1', cy);
+        line.setAttribute('x2', x);
+        line.setAttribute('y2', y);
+        line.setAttribute('stroke', 'rgba(139, 108, 247, 0.2)');
+        line.setAttribute('stroke-width', '1.5');
+        line.setAttribute('class', 'sat-line');
+        line.setAttribute('id', `sat-line-${i}`);
+        
+        // Pulse ring glow
+        const glow = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        glow.setAttribute('cx', x);
+        glow.setAttribute('cy', y);
+        glow.setAttribute('r', '8');
+        glow.setAttribute('fill', 'none');
+        glow.setAttribute('stroke', 'var(--color-violet)');
+        glow.setAttribute('stroke-width', '1');
+        glow.setAttribute('opacity', '0');
+        glow.setAttribute('class', 'sat-glow');
+        glow.setAttribute('id', `sat-glow-${i}`);
+        
+        // Satellite core
+        const core = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        core.setAttribute('cx', x);
+        core.setAttribute('cy', y);
+        core.setAttribute('r', '5');
+        core.setAttribute('fill', '#121320');
+        core.setAttribute('stroke', 'var(--color-violet)');
+        core.setAttribute('stroke-width', '1.5');
+        core.setAttribute('class', 'sat-dot');
+        core.setAttribute('id', `sat-dot-${i}`);
+        
+        g.appendChild(line);
+        g.appendChild(glow);
+        g.appendChild(core);
+        svg.appendChild(g);
+      }
+    }
+
+    // Dynamic style updates for satellites
+    function updateSatelliteStyle(index, status) {
+      const line = document.getElementById(`sat-line-${index}`);
+      const glow = document.getElementById(`sat-glow-${index}`);
+      const dot = document.getElementById(`sat-dot-${index}`);
+      
+      if (!line || !glow || !dot) return;
+      
+      if (status === 'pending') {
+        line.setAttribute('stroke', 'var(--color-amber)');
+        line.setAttribute('stroke-width', '2.5');
+        dot.setAttribute('fill', 'var(--color-amber)');
+        dot.setAttribute('stroke', 'var(--color-amber)');
+        glow.setAttribute('stroke', 'var(--color-amber)');
+        glow.setAttribute('opacity', '1');
+        glow.classList.add('pulse-glow');
+      } else if (status === 'success') {
+        line.setAttribute('stroke', 'var(--color-green)');
+        line.setAttribute('stroke-width', '2');
+        dot.setAttribute('fill', 'var(--color-green)');
+        dot.setAttribute('stroke', 'var(--color-green)');
+        glow.setAttribute('stroke', 'var(--color-green)');
+        glow.setAttribute('opacity', '0.7');
+        glow.classList.remove('pulse-glow');
+      } else if (status === 'failed') {
+        line.setAttribute('stroke', 'var(--color-red)');
+        line.setAttribute('stroke-width', '2');
+        dot.setAttribute('fill', 'var(--color-red)');
+        dot.setAttribute('stroke', 'var(--color-red)');
+        glow.setAttribute('stroke', 'var(--color-red)');
+        glow.setAttribute('opacity', '0.7');
+        glow.classList.remove('pulse-glow');
+      } else {
+        // Revert
+        line.setAttribute('stroke', 'rgba(139, 108, 247, 0.2)');
+        line.setAttribute('stroke-width', '1.5');
+        dot.setAttribute('fill', '#121320');
+        dot.setAttribute('stroke', 'var(--color-violet)');
+        glow.setAttribute('opacity', '0');
+        glow.classList.remove('pulse-glow');
+      }
+    }
+
+    // Reset all nodes
+    function resetSVGSatellites() {
+      for (let i = 0; i < 12; i++) {
+        updateSatelliteStyle(i, 'idle');
+      }
+    }
+  </script>
+</body>
+</html>
